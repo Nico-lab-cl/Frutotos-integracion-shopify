@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Atletas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-10">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow">
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">Gestión de Cupones y Atletas</h1>
+        
+        <form action="/create-affiliate" method="POST" class="mb-10 bg-blue-50 p-6 rounded border border-blue-200">
+            <h2 class="text-lg font-semibold mb-4">Nuevo Atleta</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <input type="text" name="name" placeholder="Nombre Atleta" class="p-2 border rounded" required>
+                <input type="email" name="email" placeholder="Email" class="p-2 border rounded" required>
+                <input type="text" name="code" placeholder="Código (ej: JUAN10)" class="p-2 border rounded font-bold" required>
+                <div class="flex gap-2">
+                    <input type="number" name="discount" placeholder="% Desc. Cliente" class="p-2 border rounded w-1/2" required>
+                    <input type="number" name="commission" placeholder="% Comisión" class="p-2 border rounded w-1/2" required>
+                </div>
+            </div>
+            <button type="submit" class="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-bold">Crear Cupón en Shopify</button>
+        </form>
+
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b-2 border-gray-300">
+                    <th class="py-2">Atleta</th>
+                    <th class="py-2">Código</th>
+                    <th class="py-2 text-center">Desc. Cliente</th>
+                    <th class="py-2 text-center">Comisión</th>
+                    <th class="py-2 text-center">Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% affiliates.forEach(function(atleta) { %>
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3"><%= atleta.name %></td>
+                    <td class="py-3 font-mono font-bold text-blue-600"><%= atleta.shopify_code %></td>
+                    <td class="py-3 text-center"><%= atleta.discount_percent %>%</td>
+                    <td class="py-3 text-center text-green-600"><%= atleta.commission_percent %>%</td>
+                    <td class="py-3 text-center">
+                        <span class="px-2 py-1 rounded text-xs <%= atleta.status == 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
+                            <%= atleta.status %>
+                        </span>
+                    </td>
+                </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
