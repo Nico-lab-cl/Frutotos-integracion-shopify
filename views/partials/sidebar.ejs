@@ -1,0 +1,33 @@
+<div
+    class="w-64 bg-gradient-to-b from-green-800 to-teal-900 text-white flex-shrink-0 flex flex-col h-screen sticky top-0 font-sans shadow-2xl z-50">
+    <div class="p-6 flex items-center gap-3 border-b border-white/10 bg-black/10">
+        <img src="/images/logo.png" alt="Frutotos" class="h-10 w-auto filter drop-shadow-md">
+        <span class="text-lg font-bold tracking-tight text-green-50">Admin</span>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto py-6 px-3 space-y-2">
+        <a href="/"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group <%= path === '/' ? 'bg-white/10 text-white shadow-inner font-semibold border-l-4 border-green-400' : 'text-green-100 hover:bg-white/5 hover:text-white hover:translate-x-1' %>">
+            <span class="text-xl">🏷️</span>
+            <span class="tracking-wide">Cupones</span>
+        </a>
+
+        <a href="/sales"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group <%= path === '/sales' ? 'bg-white/10 text-white shadow-inner font-semibold border-l-4 border-green-400' : 'text-green-100 hover:bg-white/5 hover:text-white hover:translate-x-1' %>">
+            <span class="text-xl">💰</span>
+            <span class="tracking-wide">Ventas</span>
+        </a>
+    </nav>
+
+    <div class="p-4 border-t border-white/10 bg-black/20">
+        <a href="/logout"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-red-200 hover:bg-red-500/20 hover:text-red-100 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Cerrar Sesión</span>
+        </a>
+    </div>
+</div>

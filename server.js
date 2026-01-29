@@ -85,7 +85,7 @@ initDB();
 app.get('/', requireAuth, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM affiliates ORDER BY created_at DESC');
-        res.render('index', { affiliates: result.rows });
+        res.render('index', { affiliates: result.rows, path: '/' });
     } catch (err) {
         res.send("Error cargando afiliados: " + err.message);
     }
@@ -222,6 +222,69 @@ app.get('/sync', requireAuth, async (req, res) => {
     } catch (error) {
         console.error("Error en sincronización:", error);
         res.send("Error sincronizando: " + error.message);
+    }
+});
+
+// --- RUTA DE VENTAS ---
+app.get('/sales', requireAuth, async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        let shopifyUrl = `https://${process.env.SHOPIFY_SHOP_DOMAIN}/admin/api/2024-01/orders.json?status=any&limit=250`;
+
+        // Agregar filtro de fecha si existe
+        if (start) {
+            shopifyUrl += `&created_at_min=${new Date(start).toISOString()}`;
+        }
+        if (end) {
+            // Ajustar end date para incluir todo el día
+            const endDate = new Date(end);
+            endDate.setHours(23, 59, 59, 999);
+            shopifyUrl += `&created_at_max=${endDate.toISOString()}`;
+        }
+
+        const shopifyHeader = { 'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN };
+        const response = await axios.get(shopifyUrl, { headers: shopifyHeader });
+        const orders = response.data.orders;
+
+        // Obtener códigos de afiliados para calcular comisiones
+        const affiliatesResult = await pool.query('SELECT shopify_code, commission_percent FROM affiliates');
+        const affiliatesMap = new Map();
+        affiliatesResult.rows.forEach(a => {
+            affiliatesMap.set(a.shopify_code, parseFloat(a.commission_percent));
+        });
+
+        // Procesar ordenes para la vista
+        const sales = orders.map(order => {
+            const discountCode = (order.discount_codes && order.discount_codes.length > 0) ? order.discount_codes[0].code : null;
+            let commission = 0;
+
+            if (discountCode && affiliatesMap.has(discountCode)) {
+                const percent = affiliatesMap.get(discountCode);
+                commission = parseFloat(order.total_price) * (percent / 100);
+            }
+
+            return {
+                order_number: order.order_number,
+                created_at: order.created_at,
+                customer: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Invitado',
+                total_price: parseFloat(order.total_price),
+                discount_code: discountCode,
+                commission: commission
+            };
+        });
+
+        const totalSales = sales.reduce((acc, curr) => acc + curr.total_price, 0);
+
+        res.render('sales', {
+            sales,
+            path: '/sales',
+            startDate: start || '',
+            endDate: end || '',
+            totalSales
+        });
+    } catch (error) {
+        console.error("Error cargando ventas:", error);
+        res.send("Error cargando reporte de ventas: " + error.message);
     }
 });
 

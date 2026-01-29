@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Ventas | Frutotos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                fontFamily: {
+                    sans: ['Poppins', 'sans-serif'],
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-gray-50 font-sans h-screen flex overflow-hidden">
+
+    <!-- Sidebar -->
+    <%- include('partials/sidebar', { path: '/sales' }) %>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto relative z-0">
+            <div class="max-w-7xl mx-auto px-8 py-10">
+
+                <!-- Header -->
+                <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Reporte de Ventas</h1>
+                        <p class="text-green-600 font-medium">Transacciones canalizadas desde Shopify</p>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+                    <form action="/sales" method="GET" class="flex flex-wrap items-end gap-4">
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="block text-gray-700 text-xs font-bold mb-2 uppercase tracking-wide">Fecha
+                                Inicio</label>
+                            <input type="date" name="start" value="<%= startDate %>"
+                                class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-green-500 focus:outline-none transition bg-gray-50">
+                        </div>
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="block text-gray-700 text-xs font-bold mb-2 uppercase tracking-wide">Fecha
+                                Fin</label>
+                            <input type="date" name="end" value="<%= endDate %>"
+                                class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-green-500 focus:outline-none transition bg-gray-50">
+                        </div>
+                        <button type="submit"
+                            class="bg-green-600 text-white px-6 py-2.5 rounded-lg hover:bg-green-700 font-bold shadow transition flex items-center gap-2">
+                            <span>🔍</span> Filtrar
+                        </button>
+                        <% if (startDate || endDate) { %>
+                            <a href="/sales"
+                                class="text-gray-500 underline text-sm hover:text-red-500 transition">Limpiar
+                                filtros</a>
+                            <% } %>
+                    </form>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg">
+                        <div class="text-green-100 text-sm font-medium uppercase tracking-wider mb-1">Ventas Totales
+                        </div>
+                        <div class="text-4xl font-bold">$<%= new Intl.NumberFormat('es-CL').format(totalSales) %>
+                        </div>
+                        <div class="mt-2 text-green-100 text-xs bg-white/20 inline-block px-2 py-1 rounded">En el
+                            periodo seleccionado</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                        <div class="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Transacciones</div>
+                        <div class="text-4xl font-bold text-gray-800">
+                            <%= sales.length %>
+                        </div>
+                        <div class="mt-2 text-green-600 text-xs">Ordenes procesadas</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                        <div class="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Ticket Promedio
+                        </div>
+                        <div class="text-4xl font-bold text-gray-800">
+                            $<%= sales.length> 0 ? new Intl.NumberFormat('es-CL').format(Math.round(totalSales /
+                                sales.length)) : 0 %>
+                        </div>
+                        <div class="mt-2 text-green-600 text-xs">Por venta</div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200">
+                                    <th class="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Orden
+                                    </th>
+                                    <th class="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha
+                                    </th>
+                                    <th class="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                        Cliente</th>
+                                    <th class="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Cupón
+                                        Usado</th>
+                                    <th
+                                        class="py-4 px-6 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                        Total Venta</th>
+                                    <th
+                                        class="py-4 px-6 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                        Comisión (Est.)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <% sales.forEach(function(sale) { %>
+                                    <tr class="hover:bg-green-50/50 transition duration-150">
+                                        <td class="py-4 px-6 font-mono font-bold text-green-700">
+                                            <a href="#" class="hover:underline">
+                                                <%= sale.order_number %>
+                                            </a>
+                                        </td>
+                                        <td class="py-4 px-6 text-gray-600 text-sm">
+                                            <%= new Date(sale.created_at).toLocaleDateString('es-CL') %>
+                                                <span class="text-xs text-gray-400 block">
+                                                    <%= new Date(sale.created_at).toLocaleTimeString('es-CL',
+                                                        {hour: '2-digit' , minute:'2-digit'}) %>
+                                                </span>
+                                        </td>
+                                        <td class="py-4 px-6 font-medium text-gray-800">
+                                            <%= sale.customer %>
+                                        </td>
+                                        <td class="py-4 px-6">
+                                            <% if (sale.discount_code) { %>
+                                                <span
+                                                    class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-bold border border-orange-200">
+                                                    <%= sale.discount_code %>
+                                                </span>
+                                                <% } else { %>
+                                                    <span class="text-gray-400 text-xs">-</span>
+                                                    <% } %>
+                                        </td>
+                                        <td class="py-4 px-6 text-right font-bold text-gray-900">
+                                            $<%= new Intl.NumberFormat('es-CL').format(sale.total_price) %>
+                                        </td>
+                                        <td class="py-4 px-6 text-right font-bold text-green-600">
+                                            $<%= new Intl.NumberFormat('es-CL').format(sale.commission) %>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                                        <% if (sales.length===0) { %>
+                                            <tr>
+                                                <td colspan="6" class="py-10 text-center text-gray-400 italic">
+                                                    No se encontraron ventas en este periodo.
+                                                </td>
+                                            </tr>
+                                            <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+</body>
+
+</html>
