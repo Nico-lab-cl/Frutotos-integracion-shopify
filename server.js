@@ -218,7 +218,10 @@ app.get('/sync', requireAuth, async (req, res) => {
             ]);
         }
         console.log(`✅ Sincronización completada. Activos: ${priceRules.length}, Eliminados locales: ${deletedCount}`);
-        res.redirect('/');
+
+        // Redirección inteligente
+        const returnTo = req.query.returnTo || '/';
+        res.redirect(returnTo);
     } catch (error) {
         console.error("Error en sincronización:", error);
         res.send("Error sincronizando: " + error.message);
