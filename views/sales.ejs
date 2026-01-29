@@ -89,6 +89,59 @@
                     </div>
                 </div>
 
+                <!-- Coupon Stats Table -->
+                <div class="mb-10">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span class="bg-indigo-100 text-indigo-700 p-2 rounded-lg text-sm">📊</span>
+                        Resumen de Comisiones por Cupón
+                    </h3>
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-indigo-50 border-b border-indigo-100">
+                                    <th class="py-4 px-6 text-xs font-bold text-indigo-800 uppercase tracking-wider">
+                                        Cupón</th>
+                                    <th
+                                        class="py-4 px-6 text-center text-xs font-bold text-indigo-800 uppercase tracking-wider">
+                                        Ventas Generadas</th>
+                                    <th
+                                        class="py-4 px-6 text-right text-xs font-bold text-indigo-800 uppercase tracking-wider">
+                                        Total Vendido</th>
+                                    <th
+                                        class="py-4 px-6 text-right text-xs font-bold text-indigo-800 uppercase tracking-wider">
+                                        Comisión a Pagar</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <% if (typeof couponStats !=='undefined' && couponStats.length> 0) { %>
+                                    <% couponStats.forEach(function(stat) { %>
+                                        <tr class="hover:bg-indigo-50/30 transition">
+                                            <td
+                                                class="py-4 px-6 font-mono font-bold text-indigo-600 border-l-4 border-transparent hover:border-indigo-500">
+                                                <%= stat.code %>
+                                            </td>
+                                            <td class="py-4 px-6 text-center text-gray-700 font-medium">
+                                                <%= stat.count %>
+                                            </td>
+                                            <td class="py-4 px-6 text-right font-bold text-gray-800">
+                                                $<%= new Intl.NumberFormat('es-CL').format(stat.totalSales) %>
+                                            </td>
+                                            <td class="py-4 px-6 text-right font-bold text-green-600 bg-green-50/50">
+                                                $<%= new Intl.NumberFormat('es-CL').format(stat.totalCommission) %>
+                                            </td>
+                                        </tr>
+                                        <% }); %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="4" class="py-6 text-center text-gray-400 italic">No hay
+                                                        ventas con cupón en este periodo.</td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Table -->
                 <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                     <div class="overflow-x-auto">

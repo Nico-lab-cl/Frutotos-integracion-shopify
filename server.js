@@ -275,12 +275,35 @@ app.get('/sales', requireAuth, async (req, res) => {
 
         const totalSales = sales.reduce((acc, curr) => acc + curr.total_price, 0);
 
+        // Agregación por Cupón
+        const couponStatsMap = new Map();
+
+        sales.forEach(sale => {
+            if (sale.discount_code) {
+                if (!couponStatsMap.has(sale.discount_code)) {
+                    couponStatsMap.set(sale.discount_code, {
+                        code: sale.discount_code,
+                        count: 0,
+                        totalSales: 0,
+                        totalCommission: 0
+                    });
+                }
+                const stats = couponStatsMap.get(sale.discount_code);
+                stats.count += 1;
+                stats.totalSales += sale.total_price;
+                stats.totalCommission += sale.commission;
+            }
+        });
+
+        const couponStats = Array.from(couponStatsMap.values());
+
         res.render('sales', {
             sales,
             path: '/sales',
             startDate: start || '',
             endDate: end || '',
-            totalSales
+            totalSales,
+            couponStats
         });
     } catch (error) {
         console.error("Error cargando ventas:", error);
