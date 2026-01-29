@@ -3,11 +3,52 @@ const { Pool } = require('pg');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const app = express();
+const session = require('express-session');
 const port = process.env.PORT || 3000;
 
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'mi_secreto_super_seguro_cambialo',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false } // Set to true if using https in production
+}));
+
+// Middleware de Autenticación
+const requireAuth = (req, res, next) => {
+    if (req.session && req.session.isLoggedIn) {
+        return next();
+    } else {
+        res.redirect('/login');
+    }
+};
+
+// --- RUTAS DE LOGIN ---
+
+app.get('/login', (req, res) => {
+    res.render('login', { error: null });
+});
+
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    const adminUser = process.env.ADMIN_USER;
+    const adminPass = process.env.ADMIN_PASSWORD;
+
+    if (username === adminUser && password === adminPass) {
+        req.session.isLoggedIn = true;
+        res.redirect('/');
+    } else {
+        res.render('login', { error: 'Credenciales inválidas' });
+    }
+});
+
+app.get('/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/login');
+});
+
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -29,7 +70,7 @@ const initDB = async () => {
             );
         `);
         console.log("✅ Tabla de afiliados verificada/creada.");
-        
+
         await pool.query(`ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS shopify_price_rule_id VARCHAR(50)`);
         console.log("✅ Columna shopify_price_rule_id verificada.");
     } catch (err) {
@@ -38,7 +79,9 @@ const initDB = async () => {
 };
 initDB();
 
-app.get('/', async (req, res) => {
+
+
+app.get('/', requireAuth, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM affiliates ORDER BY created_at DESC');
         res.render('index', { affiliates: result.rows });
@@ -47,7 +90,7 @@ app.get('/', async (req, res) => {
     }
 });
 
-app.post('/create-affiliate', async (req, res) => {
+app.post('/create-affiliate', requireAuth, async (req, res) => {
     const { name, email, code, discount, commission } = req.body;
     try {
         const shopifyPayload = {
@@ -65,7 +108,7 @@ app.post('/create-affiliate', async (req, res) => {
 
         const shopifyUrl = `https://${process.env.SHOPIFY_SHOP_DOMAIN}/admin/api/2024-01/price_rules.json`;
         const shopifyHeader = { 'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN };
-        
+
         const responseRule = await axios.post(shopifyUrl, shopifyPayload, { headers: shopifyHeader });
         const priceRuleId = responseRule.data.price_rule.id;
 
@@ -91,20 +134,20 @@ app.post('/create-affiliate', async (req, res) => {
 
 // --- NUEVAS RUTAS: Eliminar y Sincronizar ---
 
-app.post('/delete/:id', async (req, res) => {
+app.post('/delete/:id', requireAuth, async (req, res) => {
     const affiliateId = req.params.id;
     try {
         // 1. Obtener ID de Shopify de la DB
         const result = await pool.query('SELECT shopify_price_rule_id FROM affiliates WHERE id = $1', [affiliateId]);
         if (result.rows.length === 0) return res.send("Afiliado no encontrado");
-        
+
         const shopifyPriceRuleId = result.rows[0].shopify_price_rule_id;
 
         // 2. Borrar de Shopify si tenemos ID
         if (shopifyPriceRuleId) {
             const shopifyUrl = `https://${process.env.SHOPIFY_SHOP_DOMAIN}/admin/api/2024-01/price_rules/${shopifyPriceRuleId}.json`;
             const shopifyHeader = { 'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN };
-            
+
             try {
                 await axios.delete(shopifyUrl, { headers: shopifyHeader });
                 console.log(`✅ Cupón eliminado de Shopify: ${shopifyPriceRuleId}`);
@@ -125,7 +168,7 @@ app.post('/delete/:id', async (req, res) => {
     }
 });
 
-app.get('/sync', async (req, res) => {
+app.get('/sync', requireAuth, async (req, res) => {
     try {
         console.log("🔄 Iniciando sincronización desde Shopify...");
         const shopifyUrl = `https://${process.env.SHOPIFY_SHOP_DOMAIN}/admin/api/2024-01/price_rules.json`;
@@ -138,7 +181,7 @@ app.get('/sync', async (req, res) => {
             const shopifyId = rule.id;
             const code = rule.title; // En Shopify price_rule title suele ser el código base
             const discountValue = Math.abs(parseFloat(rule.value)); // 'value' viene como string "-10.0"
-            
+
             // Upsert en DB
             await pool.query(`
                 INSERT INTO affiliates (name, email, shopify_code, discount_percent, commission_percent, shopify_price_rule_id, status)
@@ -150,8 +193,8 @@ app.get('/sync', async (req, res) => {
             `, [
                 code, // Name por defecto = Código si es nuevo
                 '',   // Email vacío si es nuevo
-                code, 
-                discountValue, 
+                code,
+                discountValue,
                 10,   // Comisión default 10%
                 shopifyId
             ]);
@@ -169,7 +212,7 @@ app.post('/webhooks/orders/create', async (req, res) => {
     if (order.discount_codes && order.discount_codes.length > 0) {
         const usedCode = order.discount_codes[0].code;
         const result = await pool.query('SELECT * FROM affiliates WHERE shopify_code = $1', [usedCode]);
-        
+
         if (result.rows.length > 0) {
             const atleta = result.rows[0];
             const totalVenta = parseFloat(order.total_price);
