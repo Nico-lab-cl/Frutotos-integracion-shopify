@@ -9,6 +9,7 @@ const port = process.env.PORT || 3000;
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.use(express.static('public')); // Servir archivos estáticos (imágenes)
 app.use(session({
     secret: process.env.SESSION_SECRET || 'mi_secreto_super_seguro_cambialo',
     resave: false,
@@ -170,36 +171,53 @@ app.post('/delete/:id', requireAuth, async (req, res) => {
 
 app.get('/sync', requireAuth, async (req, res) => {
     try {
-        console.log("🔄 Iniciando sincronización desde Shopify...");
+        console.log("🔄 Iniciando sincronización espejo desde Shopify...");
         const shopifyUrl = `https://${process.env.SHOPIFY_SHOP_DOMAIN}/admin/api/2024-01/price_rules.json`;
         const shopifyHeader = { 'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN };
 
         const response = await axios.get(shopifyUrl, { headers: shopifyHeader });
         const priceRules = response.data.price_rules;
 
+        // Crear Set de IDs activos en Shopify para búsqueda rápida
+        const activeShopifyIds = new Set(priceRules.map(r => String(r.id)));
+
+        // 1. ELIMINAR locales que ya no existen en Shopify
+        const localAffiliates = await pool.query('SELECT id, shopify_price_rule_id FROM affiliates');
+        let deletedCount = 0;
+
+        for (const affiliate of localAffiliates.rows) {
+            // Si tiene ID de shopify y ese ID no está en el Set de activos -> Eliminar
+            if (affiliate.shopify_price_rule_id && !activeShopifyIds.has(String(affiliate.shopify_price_rule_id))) {
+                await pool.query('DELETE FROM affiliates WHERE id = $1', [affiliate.id]);
+                console.log(`🗑️ Eliminado localmente (no existe en Shopify): ID ${affiliate.id}`);
+                deletedCount++;
+            }
+        }
+
+        // 2. UPSERT (Insertar o Actualizar) desde Shopify
         for (const rule of priceRules) {
             const shopifyId = rule.id;
-            const code = rule.title; // En Shopify price_rule title suele ser el código base
-            const discountValue = Math.abs(parseFloat(rule.value)); // 'value' viene como string "-10.0"
+            const code = rule.title;
+            const discountValue = Math.abs(parseFloat(rule.value));
 
-            // Upsert en DB
             await pool.query(`
                 INSERT INTO affiliates (name, email, shopify_code, discount_percent, commission_percent, shopify_price_rule_id, status)
                 VALUES ($1, $2, $3, $4, $5, $6, 'active')
                 ON CONFLICT (shopify_code) 
                 DO UPDATE SET 
                     shopify_price_rule_id = EXCLUDED.shopify_price_rule_id,
-                    discount_percent = EXCLUDED.discount_percent
+                    discount_percent = EXCLUDED.discount_percent,
+                    status = 'active'
             `, [
-                code, // Name por defecto = Código si es nuevo
-                '',   // Email vacío si es nuevo
+                code,
+                '',
                 code,
                 discountValue,
-                10,   // Comisión default 10%
+                10,
                 shopifyId
             ]);
         }
-        console.log(`✅ Sincronizados ${priceRules.length} price rules.`);
+        console.log(`✅ Sincronización completada. Activos: ${priceRules.length}, Eliminados locales: ${deletedCount}`);
         res.redirect('/');
     } catch (error) {
         console.error("Error en sincronización:", error);
