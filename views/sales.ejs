@@ -24,6 +24,18 @@
 
         <!-- Main Content -->
         <main class="flex-1 overflow-y-auto relative z-0">
+            <!-- Top Sticky Header for Mobile/Context -->
+            <header
+                class="bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-100 px-8 py-4 flex justify-between items-center md:hidden">
+                <span class="font-bold text-gray-800">Frutotos Admin</span>
+                <button id="mobile-menu-btn" class="text-gray-500 hover:text-green-600 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </header>
             <div class="max-w-7xl mx-auto px-8 py-10">
 
                 <!-- Header -->
@@ -221,6 +233,37 @@
 
             </div>
         </main>
+
+        <!-- Mobile Overlay -->
+        <div id="sidebar-overlay"
+            class="fixed inset-0 bg-black/50 z-40 hidden backdrop-blur-sm transition-opacity opacity-0"></div>
+
+        <script>
+            const sidebar = document.getElementById('sidebar');
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const sidebarCloseBtn = document.getElementById('sidebar-close');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            function openSidebar() {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => {
+                    overlay.classList.remove('opacity-0');
+                }, 10);
+            }
+
+            function closeSidebar() {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                }, 300);
+            }
+
+            mobileMenuBtn.addEventListener('click', openSidebar);
+            sidebarCloseBtn.addEventListener('click', closeSidebar);
+            overlay.addEventListener('click', closeSidebar);
+        </script>
 </body>
 
 </html>
